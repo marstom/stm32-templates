@@ -1,10 +1,14 @@
+/*
+https://visualgdb.com/tutorials/arm/stm32/timers/
+*/
+
+#include "stm32f4_discovery.h"
 #include "stm32f4xx_conf.h"
 
 void init_leds(){
   // RCC->AHB1ENR |= RCC_AHB1ENR_GPIODEN; // enable the clock to GPIOD
 
   RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOD, ENABLE);
-
   GPIO_InitTypeDef GPIO_InitDef;
   GPIO_InitDef.GPIO_Mode = GPIO_Mode_OUT;
   GPIO_InitDef.GPIO_OType = GPIO_OType_PP;
