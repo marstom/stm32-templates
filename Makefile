@@ -1,67 +1,42 @@
-# put your *.o targets here, make should handle the rest!
-
-SRCS = lcd.c stm32f4xx_it.c system_stm32f4xx.c
-
-# all the files will be generated with this name (main.elf, main.bin, main.hex, etc)
-
-PROJ_NAME=main
-
-# that's it, no need to change anything below this line!
-
-###################################################
-
 CC=arm-none-eabi-gcc
+
 OBJCOPY=arm-none-eabi-objcopy
 
-CFLAGS  = -g3 -O2 -Wall -Tstm32_flash.ld 
+CFLAGS  = -g3 -O2 -Tstm32_flash.ld 
 CFLAGS += -mlittle-endian -mthumb -mcpu=cortex-m4 -mthumb-interwork
 CFLAGS += -mfloat-abi=hard -mfpu=fpv4-sp-d16
+CFLAGS += -Iinc -Ilib -Ilib/inc
+CFLAGS += -Ilib/inc/core -Ilib/inc/peripherals
 
-###################################################
+ST_SRCS = ./src/stm32f4xx_it.c ./src/system_stm32f4xx.c ./lib/startup_stm32f4xx.s
 
-vpath %.c src
-vpath %.a lib
-
-ROOT=$(shell pwd)
-
-CFLAGS += -Iinc -Ilib -Ilib/inc 
-CFLAGS += -Ilib/inc/core -Ilib/inc/peripherals 
-
-SRCS += lib/startup_stm32f4xx.s # add startup file to build
-
-OBJS = $(SRCS:.c=.o)
-
-###################################################
-
-.PHONY: lib proj
-
-all: lib proj
-
+# build stm32 library
 lib:
 	$(MAKE) -C lib
 
-proj: 	$(PROJ_NAME).elf
-
-$(PROJ_NAME).elf: $(SRCS)
-	$(CC) $(CFLAGS) $^ -o $@ -Llib -lstm32f4
-	$(OBJCOPY) -O ihex $(PROJ_NAME).elf $(PROJ_NAME).hex
-	$(OBJCOPY) -O binary $(PROJ_NAME).elf $(PROJ_NAME).bin
+flash:
+	st-flash write program.bin 0x8000000
 
 clean:
+	rm -f *.elf
+	rm -f *.hex
+	rm -f *.bin
+
+clean_all: clean
 	$(MAKE) -C lib clean
-	rm -f $(PROJ_NAME).elf
-	rm -f $(PROJ_NAME).hex
-	rm -f $(PROJ_NAME).bin
 
 
-# my rules
-#
-flash:
-	st-flash write main.bin 0x8000000
+.PHONY: lib
 
 
-debug:
-	st-util -p 4500
-	gdb-multiarch 
-	target extended-remote localhost:4500
-	file main.elf
+# Programs rules
+
+lcd:
+	$(CC) $(CFLAGS) 01LCD/lcd.c $(ST_SRCS) -Llib -lstm32f4 -o program.elf
+	$(OBJCOPY) -O ihex program.elf program.hex
+	$(OBJCOPY) -O binary program.elf program.bin
+
+00leds:
+	$(CC) $(CFLAGS) 00Leds/leds_example.c $(ST_SRCS) -Llib -lstm32f4 -o program.elf
+	$(OBJCOPY) -O ihex program.elf program.hex
+	$(OBJCOPY) -O binary program.elf program.bin

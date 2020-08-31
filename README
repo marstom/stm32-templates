@@ -1,0 +1,10 @@
+# Tips and tricks
+
+## How to debug my program on microcontroller?
+
+This is the way I found :) First install gdb-multiarch on linux using apt-get.
+
+st-util -p 4500
+gdb-multiarch 
+target extended-remote localhost:4500
+file program.elf

@@ -6,10 +6,11 @@ Connection:
 3.3V - VCC
 GND - GND
 
-PORTA
+PORTD
 1 - DC
 2 - CE
 3 - RST
+PORTA
 7 - DIN
 5 - CLK
 
@@ -86,25 +87,14 @@ void init_spi1(){
   GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_UP;
   GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-
-  //Port LED
-  RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOD, ENABLE);
-  GPIO_InitStruct.GPIO_Pin = LED3_PIN;
-  GPIO_InitStruct.GPIO_Mode = GPIO_Mode_OUT;
-  GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
-  GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
-  GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
-  GPIO_Init(GPIOD, &GPIO_InitStruct);
-
-
-
+  // Port LED and lcd others
   GPIO_InitStruct.GPIO_Pin = LCD_RST | LCD_DC | LCD_CE;
   GPIO_InitStruct.GPIO_Mode = GPIO_Mode_OUT;
   GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
   GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
   GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
-  GPIO_Init(GPIOA, &GPIO_InitStruct);
-  GPIO_SetBits(GPIOA, LCD_CE|LCD_RST);
+  GPIO_Init(GPIOD, &GPIO_InitStruct);
+  GPIO_SetBits(GPIOD, LCD_CE|LCD_RST);
 
 
   // connect SPI1 pins to SPI alternate function
@@ -125,7 +115,7 @@ void init_spi1(){
   SPI_InitStruct.SPI_CPOL = SPI_CPOL_Low; // clock is low when idle
   SPI_InitStruct.SPI_CPHA = SPI_CPHA_1Edge; // data sampled at first edge
   SPI_InitStruct.SPI_NSS = SPI_NSS_Soft | SPI_NSSInternalSoft_Set; // set the NSS management to internal and pull internal NSS high
-  SPI_InitStruct.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_256; // SPI frequency is APB2 frequency / 4
+  SPI_InitStruct.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_256; // SPI frequency is APB2 frequency / 256
   SPI_InitStruct.SPI_FirstBit = SPI_FirstBit_MSB;// data is transmitted MSB first
   SPI_Init(SPI1, &SPI_InitStruct); 
   SPI_Cmd(SPI1, ENABLE); // enable SPI1
@@ -143,31 +133,30 @@ uint8_t spi_sendrecv(uint8_t byte){
 }
 
 void lcd_reset(){
-  GPIO_ResetBits(GPIOA, LCD_RST);
+  GPIO_ResetBits(GPIOD, LCD_RST);
   delay_ms(LCD_DELAY_TIME);
-  GPIO_SetBits(GPIOA, LCD_RST);
+  GPIO_SetBits(GPIOD, LCD_RST);
 }
 
 void lcd_cmd(uint8_t cmd){
- GPIO_ResetBits(GPIOA, LCD_CE|LCD_DC);
+ GPIO_ResetBits(GPIOD, LCD_CE|LCD_DC);
  spi_sendrecv(cmd);
- GPIO_SetBits(GPIOA, LCD_CE);
+ GPIO_SetBits(GPIOD, LCD_CE);
 }
 
 
 void lcd_data(const uint8_t* data, int size){
- GPIO_SetBits(GPIOA, LCD_DC);
- GPIO_ResetBits(GPIOA, LCD_CE);
+ GPIO_SetBits(GPIOD, LCD_DC);
+ GPIO_ResetBits(GPIOD, LCD_CE);
  for (int i = 0; i < size; i++){
   spi_sendrecv(data[i]);
  }
- GPIO_SetBits(GPIOA, LCD_CE);
+ GPIO_SetBits(GPIOD, LCD_CE);
 }
 
 
 
 int main(){
-  
   init_spi1();
   lcd_reset();
   lcd_cmd(0x21);
