@@ -1,7 +1,5 @@
 /*
-Tutorial for other board here:
-https://forbot.pl/blog/kurs-stm32-10-spi-w-praktyce-wyswietlacz-graficzny-2-id9964
-
+It will be version without SPI
 Connection:
 3.3V - VCC
 GND - GND

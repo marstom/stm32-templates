@@ -2,7 +2,7 @@ CC=arm-none-eabi-gcc
 
 OBJCOPY=arm-none-eabi-objcopy
 
-CFLAGS  = -g3 -O2 -Tstm32_flash.ld 
+CFLAGS  = -g3 -Tstm32_flash.ld 
 CFLAGS += -mlittle-endian -mthumb -mcpu=cortex-m4 -mthumb-interwork
 CFLAGS += -mfloat-abi=hard -mfpu=fpv4-sp-d16
 CFLAGS += -Iinc -Ilib -Ilib/inc
@@ -31,8 +31,13 @@ clean_all: clean
 
 # Programs rules
 
-lcd:
+01lcd:
 	$(CC) $(CFLAGS) 01LCD/lcd.c $(ST_SRCS) -Llib -lstm32f4 -o program.elf
+	$(OBJCOPY) -O ihex program.elf program.hex
+	$(OBJCOPY) -O binary program.elf program.bin
+
+02lcd:
+	$(CC) $(CFLAGS) 02LCD2/lcd.c $(ST_SRCS) -Llib -lstm32f4 -o program.elf
 	$(OBJCOPY) -O ihex program.elf program.hex
 	$(OBJCOPY) -O binary program.elf program.bin
 
