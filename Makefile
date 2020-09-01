@@ -44,4 +44,4 @@ clean_all: clean
 00leds:
 	$(CC) $(CFLAGS) 00Leds/leds_example.c $(ST_SRCS) -Llib -lstm32f4 -o program.elf
 	$(OBJCOPY) -O ihex program.elf program.hex
-	$(OBJCOPY) -O binary program.elf program.bins
+	$(OBJCOPY) -O binary program.elf program.bin
