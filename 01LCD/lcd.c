@@ -123,7 +123,7 @@ void init_spi1(){
 
 }
 
-uint8_t spi_sendrecv(uint8_t byte){
+uint8_t gpio_send(uint8_t byte){
   // poczekaj az bufor nadawczy bedzie wolny
   while (SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_TXE) == RESET);
   SPI_I2S_SendData(SPI1, byte);
@@ -141,7 +141,7 @@ void lcd_reset(){
 
 void lcd_cmd(uint8_t cmd){
  GPIO_ResetBits(GPIOD, LCD_CE|LCD_DC);
- spi_sendrecv(cmd);
+ gpio_send(cmd);
  GPIO_SetBits(GPIOD, LCD_CE);
 }
 
@@ -150,7 +150,7 @@ void lcd_data(const uint8_t* data, int size){
  GPIO_SetBits(GPIOD, LCD_DC);
  GPIO_ResetBits(GPIOD, LCD_CE);
  for (int i = 0; i < size; i++){
-  spi_sendrecv(data[i]);
+  gpio_send(data[i]);
  }
  GPIO_SetBits(GPIOD, LCD_CE);
 }
