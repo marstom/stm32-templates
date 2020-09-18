@@ -1,10 +1,29 @@
 # How to install tools ?
 
 https://istarc.wordpress.com/2014/07/01/stm32f4-hello-world/
+and
+https://blog.podkalicki.com/how-to-compile-and-burn-the-code-to-stm32-chip-on-linux-ubuntu/
 
 
 
+Install all:
 
+```bash
+sudo add-apt-repository ppa:team-gcc-arm-embedded/ppa
+sudo apt-get update
+sudo apt-get install gcc-arm-none-eabi
+
+sudo apt-get install build-essential libusb-1.0.0-dev cmake
+
+cd $HOME
+git clone git@github.com:texane/stlink.git
+cd stlink
+make release
+cd build/Release && make install DESTDIR=_install
+echo "export PATH=\$PATH:$HOME/stlink/build/Release/_install/usr/local/bin" >> $HOME/.bashrc
+echo "export LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:$HOME/stlink/build/Release/_install/usr/local/lib" >> $HOME/.bashrc
+
+```
 # Tips and tricks
 
 ## How to debug my program on microcontroller?
