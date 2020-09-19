@@ -34,3 +34,15 @@ st-util -p 4500
 gdb-multiarch 
 target extended-remote localhost:4500
 file program.elf
+
+## How restore my MCU when really stuck
+
+Following command, and rapidly clicking reset button:
+```bash
+st-flash erase
+```
+
+## Others
+
+* Never use! PortA PA3 PA2 because it's st-link programmer UART, and you clog your MCU!
+

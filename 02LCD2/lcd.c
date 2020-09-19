@@ -4,34 +4,31 @@ Connection:
 3.3V - VCC
 GND - GND
 
-PORTD
+PORTC
 1 - DC
 2 - CE
 3 - RST
-PORTA
-7 - DIN
 5 - CLK
+7 - DIN
 
 */
 
 #include "stm32f4_discovery.h"
 #include "stm32f4xx_conf.h"
 
+
+
+// ports
+#define LCD_GPIO GPIOC
+#define RCC_AHB1Periph_LCD RCC_AHB1Periph_GPIOC
+//pin
 #define LCD_DC GPIO_Pin_1
 #define LCD_CE GPIO_Pin_2
 #define LCD_RST GPIO_Pin_3
-
-  
-  /* configure pins used by SPI1
-  * PA5 = SCK
-  * PA6 = MISO
-  * PA7 = MOSI
-  */  
-
-#define SCK GPIO_Pin_5
+#define SCK GPIO_Pin_5  // clk
 #define DIN GPIO_Pin_7 // in spi its mosi
 
-#define LCD_DELAY_TIME 10
+#define LCD_DELAY_TIME 2
 
 const unsigned char logo_mini_mono [] = {
 0xFC, 0xFE, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
@@ -75,94 +72,110 @@ void delay_ms(uint32_t ms){
   }
 }
 
-void init_spi1(){
+void init_board_leds(){
+    GPIO_InitTypeDef GPIO_InitStruct;
+    //enable led3
+    RCC_AHB1PeriphClockCmd(LED3_GPIO_CLK, ENABLE);
+    GPIO_InitStruct.GPIO_Pin = LED3_PIN | LED4_PIN | LED5_PIN | LED6_PIN;
+    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_OUT;
+    GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
+    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
+    GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
+    GPIO_Init(LED3_GPIO_PORT, &GPIO_InitStruct);
+    GPIO_SetBits(LED3_GPIO_PORT, LED3_PIN | LED4_PIN | LED5_PIN | LED6_PIN);
+}
+
+void init_lcd_pins(){
   GPIO_InitTypeDef GPIO_InitStruct;
 
-  // enable clock for used IO pins
-  RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
-  RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOD, ENABLE);
+
+  //enable lcd
+  RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_LCD, ENABLE);
+  GPIO_InitStruct.GPIO_Pin = SCK | DIN | LCD_RST | LCD_DC | LCD_CE;
+  GPIO_InitStruct.GPIO_Mode = GPIO_Mode_OUT;
+  GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
+  GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
+  GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
+  GPIO_Init(LCD_GPIO, &GPIO_InitStruct);
+
+}
+
+void several_sck(){
+  for (uint8_t i = 0; i <= 16; i++)
+  {
+     GPIO_ResetBits(LCD_GPIO, SCK);
+     delay_ms(LCD_DELAY_TIME);
+     GPIO_SetBits(LCD_GPIO, DIN);
+     delay_ms(LCD_DELAY_TIME);
+  }
   
-  /* configure pins used by SPI1
-  * PA5 = SCK
-  * PA6 = MISO
-  * PA7 = MOSI
-  */  
-
-
-  //SCK MOSI
-  GPIO_InitStruct.GPIO_Pin = SCK | DIN | LED3_PIN;
-  GPIO_InitStruct.GPIO_Mode = GPIO_Mode_OUT;
-  GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
-  GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
-  GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
-  GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-  // Port LED and lcd others
-  GPIO_InitStruct.GPIO_Pin = LCD_RST | LCD_DC | LCD_CE;
-  GPIO_InitStruct.GPIO_Mode = GPIO_Mode_OUT;
-  GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
-  GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
-  GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
-  GPIO_Init(GPIOD, &GPIO_InitStruct);
-  GPIO_SetBits(GPIOD, LCD_CE|LCD_RST);
 }
 
 uint8_t gpio_send(uint8_t byte){
   // 1 clock tick __-- 1 bit is 01 in clock ticks
   //here set data, check bit state
   for (uint8_t bit_number = 0; bit_number < 8; bit_number++){
-    GPIO_ResetBits(GPIOA, SCK);
-    delay_ms(10);
     if(byte & (1 << bit_number)){
-      GPIO_SetBits(GPIOA, DIN);
+      GPIO_SetBits(LCD_GPIO, DIN);
     }else{
-      GPIO_ResetBits(GPIOA, DIN);
+      GPIO_ResetBits(LCD_GPIO, DIN);
     }
-    delay_ms(10);
-    GPIO_SetBits(GPIOA, SCK);
+    GPIO_SetBits(LCD_GPIO, SCK);
+    delay_ms(1);
+    GPIO_ResetBits(LCD_GPIO, SCK);
+    delay_ms(1);
   }
 
   return 0;
 }
 
 void lcd_reset(){
-  GPIO_ResetBits(GPIOD, LCD_RST);
-  delay_ms(LCD_DELAY_TIME);
-  GPIO_SetBits(GPIOD, LCD_RST);
+  GPIO_ResetBits(LCD_GPIO, LCD_RST); // low
+  delay_ms(20);
+  GPIO_SetBits(LCD_GPIO, LCD_RST); // high
+  delay_ms(20);
+  // several_sck();
 }
 
 void lcd_cmd(uint8_t cmd){
- GPIO_ResetBits(GPIOD, LCD_CE|LCD_DC);
+ GPIO_ResetBits(LCD_GPIO, LCD_DC); // dc low command mode
+ delay_ms(20);
+ GPIO_ResetBits(LCD_GPIO, LCD_CE); // ce low start transmission
+ delay_ms(10);
  gpio_send(cmd);
- GPIO_SetBits(GPIOD, LCD_CE);
+ GPIO_SetBits(LCD_GPIO, LCD_CE);  // ce high end transmission 
 }
 
 
 void lcd_data(const uint8_t* data, int size){
- GPIO_SetBits(GPIOD, LCD_DC);
- GPIO_ResetBits(GPIOD, LCD_CE);
+ GPIO_SetBits(LCD_GPIO, LCD_DC); // dc high data mode
+ GPIO_ResetBits(LCD_GPIO, LCD_CE); // ce low start transmission
+ delay_ms(20);
  for (int i = 0; i < size; i++){
   gpio_send(data[i]);
  }
- GPIO_SetBits(GPIOD, LCD_CE);
+ GPIO_SetBits(LCD_GPIO, LCD_CE); // ce high end transmission 
 }
 
 
 
 int main(){
-  init_spi1();
+  init_board_leds();
+  init_lcd_pins();
+  delay_ms(LCD_DELAY_TIME);
+  delay_ms(LCD_DELAY_TIME);
   lcd_reset();
-  lcd_cmd(0x21);
+  lcd_cmd(0x21); // basic instruction mode
   lcd_cmd(0x14);
   lcd_cmd(0x80 | 0xaf); //Set contrast
-  lcd_cmd(0x20);
+  lcd_cmd(0x20); // extended instruction mode
   lcd_cmd(0x0c);
   lcd_data(logo_mini_mono, sizeof(logo_mini_mono));
   while (1){
-    delay_ms(10);
-    GPIO_WriteBit(GPIOA, LED3_PIN, Bit_RESET);
-    delay_ms(10);
-    GPIO_WriteBit(GPIOA, LED3_PIN, Bit_SET);
-
+    delay_ms(110);
+    GPIO_SetBits(LED3_GPIO_PORT, LED3_PIN);
+    delay_ms(110);
+    GPIO_ResetBits(LED3_GPIO_PORT, LED3_PIN);
+    delay_ms(101);
   }
 }

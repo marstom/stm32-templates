@@ -66,7 +66,7 @@ void delay_ms(uint32_t ms){
   }
 }
 
-void init_spi1(){
+void init_lcd_pins(){
   GPIO_InitTypeDef GPIO_InitStruct;
 
   // enable clock for used IO pins
@@ -158,7 +158,7 @@ void lcd_data(const uint8_t* data, int size){
 
 
 int main(){
-  init_spi1();
+  init_lcd_pins();
   lcd_reset();
   lcd_cmd(0x21);
   lcd_cmd(0x14);
