@@ -21,6 +21,7 @@ PORTC
 // ports
 #define LCD_GPIO GPIOC
 #define RCC_AHB1Periph_LCD RCC_AHB1Periph_GPIOC
+
 //pin
 #define LCD_DC GPIO_Pin_1
 #define LCD_CE GPIO_Pin_2
@@ -28,7 +29,7 @@ PORTC
 #define SCK GPIO_Pin_5  // clk
 #define DIN GPIO_Pin_7 // in spi its mosi
 
-#define LCD_DELAY_TIME 2
+#define LCD_DELAY_TIME 1
 
 const unsigned char logo_mini_mono [] = {
 0xFC, 0xFE, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
@@ -65,6 +66,7 @@ const unsigned char logo_mini_mono [] = {
 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x7F, 0x3F,
 };
 
+
 void delay_ms(uint32_t ms){
   uint32_t sc = (uint32_t)1680 * ms;
   for(uint32_t t=0; t<=sc; t++){
@@ -88,7 +90,6 @@ void init_board_leds(){
 void init_lcd_pins(){
   GPIO_InitTypeDef GPIO_InitStruct;
 
-
   //enable lcd
   RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_LCD, ENABLE);
   GPIO_InitStruct.GPIO_Pin = SCK | DIN | LCD_RST | LCD_DC | LCD_CE;
@@ -97,6 +98,7 @@ void init_lcd_pins(){
   GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
   GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
   GPIO_Init(LCD_GPIO, &GPIO_InitStruct);
+  GPIO_SetBits(LCD_GPIO, SCK | DIN | LCD_RST | LCD_DC | LCD_CE);
 
 }
 
@@ -111,19 +113,44 @@ void several_sck(){
   
 }
 
+
+/*
+void shiftOut(uint8_t dataPin, uint8_t clockPin, uint8_t bitOrder, uint8_t val)
+{
+     uint8_t i;
+
+     for (i = 0; i < 8; i++)  {
+           if (bitOrder == LSBFIRST)
+                 digitalWrite(dataPin, !!(val & (1 << i)));
+           else      
+                 digitalWrite(dataPin, !!(val & (1 << (7 - i))));
+                 
+           digitalWrite(clockPin, HIGH);
+           digitalWrite(clockPin, LOW);            
+     }
+}
+*/
+
 uint8_t gpio_send(uint8_t byte){
   // 1 clock tick __-- 1 bit is 01 in clock ticks
   //here set data, check bit state
   for (uint8_t bit_number = 0; bit_number < 8; bit_number++){
-    if(byte & (1 << bit_number)){
+    
+
+    if( !!(byte & (1 << (7 - bit_number))) ){
       GPIO_SetBits(LCD_GPIO, DIN);
+      GPIO_SetBits(LED3_GPIO_PORT, LED6_PIN);
     }else{
       GPIO_ResetBits(LCD_GPIO, DIN);
+      GPIO_ResetBits(LED3_GPIO_PORT, LED6_PIN);
     }
+    
+
     GPIO_SetBits(LCD_GPIO, SCK);
-    delay_ms(1);
+    delay_ms(LCD_DELAY_TIME);
     GPIO_ResetBits(LCD_GPIO, SCK);
-    delay_ms(1);
+    delay_ms(LCD_DELAY_TIME);
+
   }
 
   return 0;
@@ -131,17 +158,16 @@ uint8_t gpio_send(uint8_t byte){
 
 void lcd_reset(){
   GPIO_ResetBits(LCD_GPIO, LCD_RST); // low
-  delay_ms(20);
+  delay_ms(LCD_DELAY_TIME);
   GPIO_SetBits(LCD_GPIO, LCD_RST); // high
-  delay_ms(20);
-  // several_sck();
+  delay_ms(LCD_DELAY_TIME);
 }
 
 void lcd_cmd(uint8_t cmd){
  GPIO_ResetBits(LCD_GPIO, LCD_DC); // dc low command mode
- delay_ms(20);
  GPIO_ResetBits(LCD_GPIO, LCD_CE); // ce low start transmission
- delay_ms(10);
+ GPIO_ResetBits(LCD_GPIO, SCK); //
+ delay_ms(LCD_DELAY_TIME);
  gpio_send(cmd);
  GPIO_SetBits(LCD_GPIO, LCD_CE);  // ce high end transmission 
 }
@@ -150,7 +176,8 @@ void lcd_cmd(uint8_t cmd){
 void lcd_data(const uint8_t* data, int size){
  GPIO_SetBits(LCD_GPIO, LCD_DC); // dc high data mode
  GPIO_ResetBits(LCD_GPIO, LCD_CE); // ce low start transmission
- delay_ms(20);
+ GPIO_ResetBits(LCD_GPIO, SCK);
+ delay_ms(LCD_DELAY_TIME);
  for (int i = 0; i < size; i++){
   gpio_send(data[i]);
  }
@@ -160,16 +187,15 @@ void lcd_data(const uint8_t* data, int size){
 
 
 int main(){
-  init_board_leds();
   init_lcd_pins();
-  delay_ms(LCD_DELAY_TIME);
+  init_board_leds();
   delay_ms(LCD_DELAY_TIME);
   lcd_reset();
-  lcd_cmd(0x21); // basic instruction mode
+  lcd_cmd(0x21); /* use extended instruction set */
   lcd_cmd(0x14);
   lcd_cmd(0x80 | 0xaf); //Set contrast
-  lcd_cmd(0x20); // extended instruction mode
-  lcd_cmd(0x0c);
+  lcd_cmd(0x20); /* use basic instruction set */  
+  lcd_cmd(0x0c); /* set normal mode */
   lcd_data(logo_mini_mono, sizeof(logo_mini_mono));
   while (1){
     delay_ms(110);
@@ -177,5 +203,6 @@ int main(){
     delay_ms(110);
     GPIO_ResetBits(LED3_GPIO_PORT, LED3_PIN);
     delay_ms(101);
+    lcd_data(logo_mini_mono, sizeof(logo_mini_mono));
   }
 }
